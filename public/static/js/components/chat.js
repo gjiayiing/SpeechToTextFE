@@ -21,13 +21,24 @@ function setUserResponse(message) {
   $(".suggestions").remove();
 }
 
+function speak(textSpeak) {
+  // textSpeak =  "I'm sorry I didn't understand you. Could you rephrase the question again?"
+  if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(textSpeak);
+      const voices = speechSynthesis.getVoices();
+      utterance.voice = voices[1];
+
+      speechSynthesis.speak(utterance);
+  }
+
+}
 /**
  * returns formatted bot response
  * @param {String} text bot message response's text
  *
  */
 function getBotResponse(text) {
-  botResponse = `<img class="botAvatar" src="./static/img/sara_avatar.png"/><span class="botMsg">${text}</span><div class="clearfix"></div>`;
+  botResponse = `<img class="botAvatar" src="./static/img/bot.png"/><span class="botMsg">${text}</span><div class="clearfix"></div>`;
   return botResponse;
 }
 
@@ -45,7 +56,7 @@ function setBotResponse(response) {
       // if there is no response from Rasa, send  fallback message to the user
       const fallbackMsg = "I am facing some issues, please try again later!!!";
 
-      const BotResponse = `<img class="botAvatar" src="./static/img/sara_avatar.png"/><p class="botMsg">${fallbackMsg}</p><div class="clearfix"></div>`;
+      const BotResponse = `<img class="botAvatar" src="./static/img/bot.png"/><p class="botMsg">${fallbackMsg}</p><div class="clearfix"></div>`;
 
       $(BotResponse).appendTo(".chats").hide().fadeIn(1000);
       scrollToBottomOfResults();
@@ -65,6 +76,7 @@ function setBotResponse(response) {
               .replaceAll("</strong>", "</b>");
             html = html.replace(/(?:\r\n|\r|\n)/g, "<br>");
             console.log(html);
+            console.log('responsew')
             // check for blockquotes
             if (html.includes("<blockquote>")) {
               html = html.replaceAll("<br>", "");
@@ -87,14 +99,15 @@ function setBotResponse(response) {
               html.includes("<h3")
             ) {
               html = html.replaceAll("<br>", "");
-              // botResponse = `<img class="botAvatar" src="./static/img/sara_avatar.png"/><span class="botMsg">${html}</span><div class="clearfix"></div>`;
+              // botResponse = `<img class="botAvatar" src=""/><span class="botMsg">${html}</span><div class="clearfix"></div>`;
               botResponse = getBotResponse(html);
             } else {
               // if no markdown formatting found, render the text as it is.
               if (!botResponse) {
-                botResponse = `<img class="botAvatar" src="./static/img/sara_avatar.png"/><p class="botMsg">${response[i].text}</p><div class="clearfix"></div>`;
+                botResponse = `<img class="botAvatar" src="./static/img/bot.png"/><p class="botMsg">${response[i].text}</p><div class="clearfix"></div>`;
               }
             }
+            speak(html)
             // append the bot response on to the chat screen
             $(botResponse).appendTo(".chats").hide().fadeIn(1000);
           }
@@ -419,3 +432,72 @@ $("#sendButton").on("click", (e) => {
   e.preventDefault();
   return false;
 });
+
+// own functions
+$("#recordAudio").on("mousedown", (e) => {
+  recordAudioChat()
+  e.preventDefault();
+});
+$("#recordAudio").on("mouseup", (e) => {
+  stopRecordAudioChat()
+  e.preventDefault();
+});
+
+async function sendAudioToServerChat(audioBlob) {
+  const statusText = document.getElementById("textRecord");
+  const formData = new FormData();
+  formData.append('audio', audioBlob, 'voice.mp3');
+
+  try {
+      const response = await fetch('/inputText', {
+              method: 'POST',
+              body: formData
+          })
+          .then(res => res.json())
+          .then(data => {
+              setUserResponse(data);
+              send(data)
+          })
+      statusText.textContent = "Processing audio...";
+  } catch (error) {
+      console.error("Error:", error);
+      statusText.textContent = "An error occurred.";
+  }
+}
+
+
+function handlerFunctionChat(stream) {
+  mediaRecorder = new MediaRecorder(stream);
+  mediaRecorder.ondataavailable = (event) => {
+      audioChunks.push(event.data);
+  }
+  mediaRecorder.onstop = () => {
+      const audioBlob = new Blob(audioChunks, {
+          type: 'audio/mp3'
+      });
+      sendAudioToServerChat(audioBlob)
+  }
+  mediaRecorder.start();
+}
+
+async function recordAudioChat() {
+  const statusText = document.getElementById('textRecord');
+  audioChunks = [];
+  const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true
+      }) //prompts user for permission to use audio device
+      .then(stream => {
+          statusText.textContent = "Recording audio...";
+          handlerFunctionChat(stream)
+      })
+}
+
+async function stopRecordAudioChat() {
+  if (mediaRecorder && mediaRecorder.state != "inactive") {
+      console.log("stop")
+      mediaRecorder.stop();
+  }
+  console.log("Recording stopped and saved.");
+
+}
+

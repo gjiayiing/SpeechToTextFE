@@ -43,49 +43,39 @@ app.post('/stop-recording', (req, res) => {
         success: true
     });
 })
-function speak(textSpeak) {
-    textSpeak = 'speaking'
-    console.log(textSpeak, 'speaking')
-    if('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(textSpeak);
-    const voices = speechSynthesis.getVoices();
-    // console.log(voices, 'voice')
-    utterance.voice = voices[0];
 
-    speechSynthesis.speak(utterance);
-    }
-  
-}
 app.post('/transcribe', upload.single("audio"), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: "No file uploaded." });
     }
 
     const filePath = path.join(__dirname, "temp" ,req.file.filename);
-    // console.log(`File saved at: ${filePath}`);
     const text = await transcribeAudio();
+    console.log(text, 'transcribed text')
     const RasaResponse = await chatText(text);
-
     console.log(RasaResponse)
-    // console.log(typeof(RasaResponse))
-
-    RasaResponse.forEach(message => {
-        speak(message.text)
-        // console.log(`Recipient: ${message.recipient_id}, Message: ${message.text}`);
-    });
-    // speak(RasaResponse[0].text)
-  
+    console.log(typeof(RasaResponse))
+    return res.json(RasaResponse);
 })
 
-async function press() {
-    const audioFileName = 'recorded.mp3'
-    await recordAudio(audioFileName);
-    const transcription = await transcribeAudio(audioFileName);
-    const RasaResponse = await chatText(transcription);
-    
-    speak(RasaResponse[0].text)
-}
+app.post('/inputText', upload.single("audio"), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded." });
+    }
 
+    const filePath = path.join(__dirname, "temp" ,req.file.filename);
+    const text = await transcribeAudio();
+    return res.json(text);
+})
+
+// async function press() {
+//     const audioFileName = 'recorded.mp3'
+//     await recordAudio(audioFileName);
+//     const transcription = await transcribeAudio(audioFileName);
+//     const RasaResponse = await chatText(transcription);
+    
+//     speak(RasaResponse[0].text)
+// }
 
 async function transcribeAudio() {
     console.log('transcribinggg')
@@ -132,11 +122,11 @@ async function transcribeAudio() {
     return res
 };
 
-async function chatText(boom) {
+async function chatText(text) {
     // console.log(boom, "boommm")
     const userData = {
         sender: "test2",
-        message: "hello"
+        message: text
     }
     var res
     // Send the POST request using Axios

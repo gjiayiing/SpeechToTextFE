@@ -1,8 +1,8 @@
 function playAudio() {
 
     const speechSynth = window.speechSynthesis;
-    const enteredText = "您好"
-
+    // const enteredText = "Certainly! What is the sensor ID"
+    const enteredText = "NS_1"
     // if (!speechSynth.speaking &&
     //     !enteredText.trim().length) {
     //     error.textContent = `Nothing to Convert! 
@@ -25,18 +25,17 @@ function playAudio() {
 let recording = false;
 let mediaRecorder;
 let audioChunks = [];
+
 function speak(textSpeak) {
-
-    console.log(textSpeaks, 'speaking')
-    if('speechSynthesis' in window) {
+    // textSpeak =  "I'm sorry I didn't understand you. Could you rephrase the question again?"
+    if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(textSpeak);
-    const voices = speechSynthesis.getVoices();
-    // console.log(voices, 'voice')
-    utterance.voice = voices[0];
+        const voices = speechSynthesis.getVoices();
+        utterance.voice = voices[1];
 
-    speechSynthesis.speak(utterance);
+        speechSynthesis.speak(utterance);
     }
-  
+
 }
 async function sendAudioToServer(audioBlob) {
     const statusText = document.getElementById("textRecord");
@@ -45,11 +44,16 @@ async function sendAudioToServer(audioBlob) {
 
     try {
         const response = await fetch('/transcribe', {
-            method: 'POST',
-            body: formData
-        });
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                data.forEach(message => {
+                    speak(message.text)
+                })
+            })
         statusText.textContent = "Processing audio...";
-        speak("boop")
     } catch (error) {
         console.error("Error:", error);
         statusText.textContent = "An error occurred.";
@@ -69,6 +73,7 @@ function handlerFunction(stream) {
     }
     mediaRecorder.start();
 }
+
 async function recordAudio() {
     const statusText = document.getElementById('textRecord');
     audioChunks = [];
@@ -86,9 +91,69 @@ async function stopRecordAudio() {
         console.log("stop")
         mediaRecorder.stop();
     }
+    console.log("Recording stopped and saved.");
 
-    // rec.stop()
+}
 
+async function sendAudioToServerChat(audioBlob) {
+    const statusText = document.getElementById("textRecord");
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'voice.mp3');
+
+    try {
+        const response = await fetch('/inputText', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                send(data)
+                // var link = document.getElementById('my-link');
+                // link.click()
+                // data.forEach(message => {
+                //     speak(message.text)
+                // })
+            })
+        statusText.textContent = "Processing audio...";
+    } catch (error) {
+        console.error("Error:", error);
+        statusText.textContent = "An error occurred.";
+    }
+}
+
+
+function handlerFunctionChat(stream) {
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+    }
+    mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, {
+            type: 'audio/mp3'
+        });
+        sendAudioToServerChat(audioBlob)
+    }
+    mediaRecorder.start();
+}
+
+async function recordAudioChat() {
+    console.log('testing')
+    // const statusText = document.getElementById('textRecord');
+    // audioChunks = [];
+    // const stream = await navigator.mediaDevices.getUserMedia({
+    //         audio: true
+    //     }) //prompts user for permission to use audio device
+    //     .then(stream => {
+    //         statusText.textContent = "Recording audio...";
+    //         handlerFunctionChat(stream)
+    //     })
+}
+
+async function stopRecordAudioChat() {
+    if (mediaRecorder && mediaRecorder.state != "inactive") {
+        console.log("stop")
+        mediaRecorder.stop();
+    }
     console.log("Recording stopped and saved.");
 
 }
