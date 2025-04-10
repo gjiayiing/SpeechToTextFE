@@ -55,11 +55,14 @@
     <button type="button" class="btn btn-primary" onclick="playAudio()">Play</button>
   </div>
   <div class="container" style="text-align:center">
+    
+  </div>
+  <div class="container" style="text-align:center">
     <div> Text to Speech</div>
     <div id="textRecord"> Status</div>
-    <button onclick="speak()">speaK</button>
-    <!-- <button type="button" class="btn btn-primary" onmousedown="press()">Record</button> -->
-    <button type="button" class="btn btn-primary" onmousedown="recordAudio()" onmouseup="stopRecordAudio()">Record</button>
+    <button onclick="speak('speaking')">speaK</button>
+    <button type="button" class="btn btn-primary" onmousedown="recordAudio()"
+      onmouseup="stopRecordAudio()">Record</button>
     <!-- <audio id="audioPlayer" controls></audio> -->
   </div>
   <!-- <div class="dropdown">
@@ -102,7 +105,12 @@
       <div class="keypad">
         <textarea id="userInput" placeholder="Type a message..." class="usrInput"></textarea>
         <div id="sendButton">
+          
           <i class="fa fa-paper-plane" aria-hidden="true"></i>
+        </div>
+        <div id="recordAudio"> 
+            <i class="fa fa-microphone" aria-hidden="true"></i>
+
         </div>
       </div>
     </div>
