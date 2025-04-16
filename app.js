@@ -19,7 +19,22 @@ const storage = multer.diskStorage({
     }
 });
 
-const upload = multer({ storage });
+const storageAudio = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'temp/')
+    }, // Ensure this folder exists
+    filename: (req, file, cb) => {
+        cb(null, "test.WAV"); // Save file as "recording.mp3"
+    }
+});
+
+const upload = multer({
+    storage
+});
+
+const uploadAudio = multer({
+    storage: storageAudio
+});
 
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -46,24 +61,28 @@ app.post('/stop-recording', (req, res) => {
 
 app.post('/transcribe', upload.single("audio"), async (req, res) => {
     if (!req.file) {
-        return res.status(400).json({ error: "No file uploaded." });
+        return res.status(400).json({
+            error: "No file uploaded."
+        });
     }
 
-    const filePath = path.join(__dirname, "temp" ,req.file.filename);
+    const filePath = path.join(__dirname, "temp", req.file.filename);
     const text = await transcribeAudio();
     console.log(text, 'transcribed text')
     const RasaResponse = await chatText(text);
     console.log(RasaResponse)
-    console.log(typeof(RasaResponse))
+    console.log(typeof (RasaResponse))
     return res.json(RasaResponse);
 })
 
 app.post('/inputText', upload.single("audio"), async (req, res) => {
     if (!req.file) {
-        return res.status(400).json({ error: "No file uploaded." });
+        return res.status(400).json({
+            error: "No file uploaded."
+        });
     }
 
-    const filePath = path.join(__dirname, "temp" ,req.file.filename);
+    const filePath = path.join(__dirname, "temp", req.file.filename);
     const text = await transcribeAudio();
     return res.json(text);
 })
@@ -73,9 +92,56 @@ app.post('/inputText', upload.single("audio"), async (req, res) => {
 //     await recordAudio(audioFileName);
 //     const transcription = await transcribeAudio(audioFileName);
 //     const RasaResponse = await chatText(transcription);
-    
+
 //     speak(RasaResponse[0].text)
 // }
+app.post('/transcribeAudio', uploadAudio.single('audio'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({
+            error: 'No file uploaded'
+        });
+    }
+    const form = new FormData();
+    const params = {
+        encode: 'true',
+        task: 'transcribe',
+        language: 'en',
+        initial_prompt: '',
+        output: 'txt',
+        // Add other parameters here
+    };
+    for (const key in params) {
+        form.append(key, params[key]);
+    }
+    const filePath = req.file.path
+    // Append the file to the form data
+
+    form.append('audio_file', fs.createReadStream(filePath), {
+        filename: req.file.filename,
+        contentType: 'audio/wav' // Set the MIME type for the file
+    });
+
+    var res
+    // Send the POST request using Axios
+    await axios.post('http://localhost:'+req.body.port+'/asr', form, {
+            headers: {
+                ...form.getHeaders(), // Include the appropriate headers for multipart/form-data
+            },
+        })
+        .then(response => {res = response.data})
+        .catch(error => {
+            // Handle errors
+            if (error.response) {
+                console.error('Response error:', error.response.data);
+            } else if (error.request) {
+                console.error('Request error:', error.request);
+            } else {
+                console.error('Error message:', error.message);
+            }
+        });
+        console.log(res)
+        return res
+});
 
 async function transcribeAudio() {
     console.log('transcribinggg')
@@ -119,6 +185,7 @@ async function transcribeAudio() {
             }
         });
 
+    console.log(res)
     return res
 };
 

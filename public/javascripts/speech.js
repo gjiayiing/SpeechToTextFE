@@ -22,6 +22,31 @@ function playAudio() {
     }, 5000);
 
 }
+async function uploadAudio(port) {
+    const input = document.getElementById('audioInput');
+    const file = input.files[0];
+
+    if (!file) {
+      alert("Please select an audio file.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("audio", file);
+    formData.append("port", port)
+
+    try {
+      const response = await fetch('/transcribeAudio', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+      console.log('Success:', result);
+    } catch (error) {
+      console.error('Error uploading file:', error);
+    }
+  }
 let recording = false;
 let mediaRecorder;
 let audioChunks = [];

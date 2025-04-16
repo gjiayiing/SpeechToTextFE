@@ -49,21 +49,20 @@
 </head>
 
 <body>
-  <div class="container" style="text-align:center">
-    <div> Speech to text</div>
-    <!-- <button type="button" class="btn btn-primary" onmousedown="press()">Record</button> -->
-    <button type="button" class="btn btn-primary" onclick="playAudio()">Play</button>
-  </div>
-  <div class="container" style="text-align:center">
-    
-  </div>
-  <div class="container" style="text-align:center">
-    <div> Text to Speech</div>
+  <div class="container" style="text-align:center;margin-bottom:50px">
+    <h2>Speech to text</h2>
     <div id="textRecord"> Status</div>
-    <button onclick="speak('speaking')">speaK</button>
+  </div>
+  <div class="container" style="text-align:center;margin-bottom:50px">
+ 
+    <h3>Upload an audio file</h3>
+    <input type="file" id="audioInput" accept="audio/*">
+    <button onclick="uploadAudio('9000')">Upload Audio</button>
+  </div>
+  <div class="container" style="text-align:center">
     <button type="button" class="btn btn-primary" onmousedown="recordAudio()"
-      onmouseup="stopRecordAudio()">Record</button>
-    <!-- <audio id="audioPlayer" controls></audio> -->
+    onmouseup="stopRecordAudio()">Record</button>
+  <!-- <audio id="audioPlayer" controls></audio> -->
   </div>
   <!-- <div class="dropdown">
     <span>Mouse over me</span>
@@ -105,11 +104,11 @@
       <div class="keypad">
         <textarea id="userInput" placeholder="Type a message..." class="usrInput"></textarea>
         <div id="sendButton">
-          
+
           <i class="fa fa-paper-plane" aria-hidden="true"></i>
         </div>
-        <div id="recordAudio"> 
-            <i class="fa fa-microphone" aria-hidden="true"></i>
+        <div id="recordAudio">
+          <i class="fa fa-microphone" aria-hidden="true"></i>
 
         </div>
       </div>
