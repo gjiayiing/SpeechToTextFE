@@ -318,7 +318,7 @@ function actionTrigger() {
 // eslint-disable-next-line no-unused-vars
 function customActionTrigger() {
   $.ajax({
-    url: "http://localhost:5055/webhook/",
+    url: "http://localhost:5055/webhook",
     type: "POST",
     contentType: "application/json",
     data: JSON.stringify({
@@ -330,7 +330,8 @@ function customActionTrigger() {
     success(botResponse, status) {
       console.log("Response from Rasa: ", botResponse, "\nStatus: ", status);
 
-      if (Object.hasOwnProperty.call(botResponse, "responses")) {
+      if (Object.hasOwnProperty.
+        call(botResponse, "responses")) {
         setBotResponse(botResponse.responses);
       }
       $("#userInput").prop("disabled", false);

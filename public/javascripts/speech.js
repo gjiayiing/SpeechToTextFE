@@ -40,9 +40,12 @@ async function uploadAudio(port) {
         method: 'POST',
         body: formData,
       });
-
       const result = await response.json();
-      console.log('Success:', result);
+      result.forEach(message => {
+        console.log(message)
+        console.log("text", message.text)
+        speak(message.text);
+      })
     } catch (error) {
       console.error('Error uploading file:', error);
     }
@@ -55,10 +58,26 @@ function speak(textSpeak) {
     // textSpeak =  "I'm sorry I didn't understand you. Could you rephrase the question again?"
     if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(textSpeak);
-        const voices = speechSynthesis.getVoices();
-        utterance.voice = voices[1];
+        //waity for voices to load
+        const setVoice = () => {
+            const voices = speechSynthesis.getVoices();
+            if(voices.length > 0) {
+                utterance.voice[5] || voices[5];
+                speechSynthesis.speak(utterance)
+            }
+            else {
+                console.error("No voices available yet.")
+            }
+        }
+        //Ensure that voices are loaded
+        if(speechSynthesis.onvoiceschanged !==undefined) {
+            speechSynthesis.onvoiceschanged = setVoice;
+        } else {
+            setVoice();
+        }
 
-        speechSynthesis.speak(utterance);
+    }else {
+        console.error("Speech Synthesis not supported in browser")
     }
 
 }
@@ -72,12 +91,11 @@ async function sendAudioToServer(audioBlob) {
                 method: 'POST',
                 body: formData
             })
-            .then(res => res.json())
-            .then(data => {
-                data.forEach(message => {
-                    speak(message.text)
-                })
-            })
+        const data = await response.json();
+        data.forEach(message => {
+            speak(message.text);
+
+        })
         statusText.textContent = "Processing audio...";
     } catch (error) {
         console.error("Error:", error);
@@ -100,15 +118,32 @@ function handlerFunction(stream) {
 }
 
 async function recordAudio() {
+    // const statusText = document.getElementById('textRecord');
+    // audioChunks = [];
+    // const stream = await navigator.mediaDevices.getUserMedia({
+    //         audio: true
+    //     }) //prompts user for permission to use audio device
+    //     .then(stream => {
+    //         statusText.textContent = "Recording audio...";
+    //         handlerFunction(stream)
+    //     })
+
     const statusText = document.getElementById('textRecord');
     audioChunks = [];
-    const stream = await navigator.mediaDevices.getUserMedia({
-            audio: true
-        }) //prompts user for permission to use audio device
-        .then(stream => {
-            statusText.textContent = "Recording audio...";
-            handlerFunction(stream)
-        })
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    statusText.textContent = "Recording audio...";
+
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+    };
+    mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+        sendAudioToServer(audioBlob);
+    };
+    mediaRecorder.start();
+    
 }
 
 async function stopRecordAudio() {

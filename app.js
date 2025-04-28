@@ -8,6 +8,7 @@ const FormData = require("form-data")
 // const mic = require("mic");
 const path = require('path');
 var cors = require('cors');
+app.use(cors());
 const multer = require("multer")
 // Set up storage for uploaded files
 const storage = multer.diskStorage({
@@ -65,14 +66,23 @@ app.post('/transcribe', upload.single("audio"), async (req, res) => {
             error: "No file uploaded."
         });
     }
-
-    const filePath = path.join(__dirname, "temp", req.file.filename);
-    const text = await transcribeAudio();
-    console.log(text, 'transcribed text')
-    const RasaResponse = await chatText(text);
-    console.log(RasaResponse)
-    console.log(typeof (RasaResponse))
-    return res.json(RasaResponse);
+    const filePath = path.resolve(__dirname, 'temp', 'voice.mp3');
+    // const filePath = path.join(__dirname, "temp", req.file.filename);
+    try {
+        const transcription = await transcribeAudio();
+        res.json([{text: transcription}]);
+    } catch (error) {
+        console.error("Error during transcription or Rasa Response:", error);
+        res.status(500).json({error: "Internal Server Error"});
+    } finally {
+        fs.unlinkSync(filePath)
+    }
+    // const text = await transcribeAudio();
+    // console.log(text, 'transcribed text')
+    // const RasaResponse = await chatText(text);
+    // console.log(RasaResponse)
+    // console.log(typeof (RasaResponse))
+    // return res.json(RasaResponse);
 })
 
 app.post('/inputText', upload.single("audio"), async (req, res) => {
@@ -101,50 +111,51 @@ app.post('/transcribeAudio', uploadAudio.single('audio'), async (req, res) => {
             error: 'No file uploaded'
         });
     }
-    const form = new FormData();
-    const params = {
-        encode: 'true',
-        task: 'transcribe',
-        language: 'en',
-        initial_prompt: '',
-        output: 'txt',
-        // Add other parameters here
-    };
-    for (const key in params) {
-        form.append(key, params[key]);
-    }
     const filePath = req.file.path
-    // Append the file to the form data
+    try {
 
-    form.append('audio_file', fs.createReadStream(filePath), {
-        filename: req.file.filename,
-        contentType: 'audio/wav' // Set the MIME type for the file
-    });
-
-    var res
-    // Send the POST request using Axios
-    await axios.post('http://localhost:'+req.body.port+'/asr', form, {
-            headers: {
-                ...form.getHeaders(), // Include the appropriate headers for multipart/form-data
-            },
-        })
-        .then(response => {res = response.data})
-        .catch(error => {
-            // Handle errors
-            if (error.response) {
-                console.error('Response error:', error.response.data);
-            } else if (error.request) {
-                console.error('Request error:', error.request);
-            } else {
-                console.error('Error message:', error.message);
-            }
+        const form = new FormData();
+        const params = {
+            encode: 'true',
+            task: 'transcribe',
+            language: 'en',
+            initial_prompt: 'initial_prompt',
+            output: 'txt',
+            // Add other parameters here
+        };
+        for (const key in params) {
+            form.append(key, params[key]);
+        }
+        // const filePath = path.resolve(__dirname, 'temp', 'voice.mp3');
+        // Append the file to the form data
+        form.append('audio_file', fs.createReadStream(filePath), {
+            filename: req.file.filename,
+            contentType: 'audio/wav' // Set the MIME type for the file
         });
-        console.log(res)
-        return res
+    
+        try {
+            const response = await axios.post('http://localhost:9000/asr', form, {
+                headers: {
+                    ...form.getHeaders(), // Include the appropriate headers for multipart/form-data
+                },
+            });
+            console.log("response from /transcribeAudioChat", response.data)
+            res.json([{text: response.data}]);
+        }catch{
+            console.error('Error in transcription API:', error);
+            throw new Error('Error during transcription');
+        }
+
+    }catch (error) {
+        console.error("Error during transcription or Rasa Response:", error);
+        res.status(500).json({error: "Internal Server Error"});
+    } finally {
+        fs.unlinkSync(filePath)
+    }
+
 });
 
 async function transcribeAudio() {
-    console.log('transcribinggg')
     const form = new FormData();
     const params = {
         encode: 'true',
@@ -164,33 +175,20 @@ async function transcribeAudio() {
         contentType: 'audio/mpeg' // Set the MIME type for the file
     });
 
-    var res
-    // Send the POST request using Axios
-    await axios.post('http://localhost:9000/asr', form, {
+    try {
+        const response = await axios.post('http://localhost:9000/asr', form, {
             headers: {
                 ...form.getHeaders(), // Include the appropriate headers for multipart/form-data
             },
-        })
-        .then(response => {
-            res = response.data;
-        })
-        .catch(error => {
-            // Handle errors
-            if (error.response) {
-                console.error('Response error:', error.response.data);
-            } else if (error.request) {
-                console.error('Request error:', error.request);
-            } else {
-                console.error('Error message:', error.message);
-            }
         });
-
-    console.log(res)
-    return res
+        return response.data;
+    }catch{
+        console.error('Error in transcription API:', error);
+        throw new Error('Error during transcription');
+    }
 };
 
 async function chatText(text) {
-    // console.log(boom, "boommm")
     const userData = {
         sender: "test2",
         message: text
@@ -213,8 +211,6 @@ async function chatText(text) {
                 console.error('Error message:', error.message);
             }
         });
-    // console.log(res.text)
-    // console.log(res, "response")
     return res
 };
 
